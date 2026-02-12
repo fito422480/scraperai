@@ -23,6 +23,32 @@ class DynamicFieldResponseModel(BaseModel):
     fields: list[DynamicField]
 
 
+def _normalize_fields_payload(json_data: dict, *, mode: str) -> dict:
+    if not isinstance(json_data, dict):
+        return {"fields": []}
+    if "fields" in json_data and isinstance(json_data["fields"], list):
+        return json_data
+
+    candidate_keys = ["items", "data", "results", "output"]
+    if mode == "static":
+        candidate_keys = ["static_fields", "static", *candidate_keys]
+    else:
+        candidate_keys = ["dynamic_fields", "dynamic", *candidate_keys]
+
+    for key in candidate_keys:
+        value = json_data.get(key)
+        if isinstance(value, list):
+            return {"fields": value}
+
+    # Last resort: if top-level looks like a single field object.
+    if mode == "static" and ("field_name" in json_data or "field_xpath" in json_data):
+        return {"fields": [json_data]}
+    if mode == "dynamic" and ("section_name" in json_data or "name_xpath" in json_data or "value_xpath" in json_data):
+        return {"fields": [json_data]}
+
+    return {"fields": []}
+
+
 class DataFieldsExtractor(ChatModelAgent):
     def __init__(self, model: BaseJsonLM):
         super().__init__(model)
@@ -61,7 +87,8 @@ If nothing found return empty array"""
         tree = html.fragment_fromstring(html_snippet, create_parent=True)
 
         def extract_fields_from_response(json_data: dict) -> list[StaticField]:
-            model = StaticFieldResponseModel(**json_data)
+            normalized = _normalize_fields_payload(json_data, mode="static")
+            model = StaticFieldResponseModel(**normalized)
             for i in range(len(model.fields)):
                 mod_xpath = '.' + model.fields[i].field_xpath.lstrip('.')
                 model.fields[i].first_value = extract_field_by_xpath(tree, mod_xpath)
@@ -114,7 +141,8 @@ XPATHs should start with ".//".
         tree = html.fromstring(html_content)
 
         def extract_fields_from_response(json_data: dict) -> list[DynamicField]:
-            model = DynamicFieldResponseModel(**json_data)
+            normalized = _normalize_fields_payload(json_data, mode="dynamic")
+            model = DynamicFieldResponseModel(**normalized)
             for i in range(len(model.fields)):
                 model.fields[i].first_values = extract_dynamic_fields_by_xpath(
                     model.fields[i].name_xpath,

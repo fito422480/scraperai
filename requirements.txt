@@ -31,3 +31,4 @@ pydantic
 # CLI
 appdirs
 click
+streamlit

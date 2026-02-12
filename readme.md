@@ -121,6 +121,20 @@ It can be provided via an environment variable, a `.env` file, or directly to th
 
 Use `scraperai --help`  for assistance.
 
+### Streamlit Web App (no ChromeDriver)
+You can run ScraperAI from your browser using Streamlit and the requests crawler (no Selenium/ChromeDriver).
+
+```console
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+In the web app you can:
+- Run scraping from an existing `.scraperai.json` config.
+- Auto-generate a config with OpenAI and download it.
+
+Note: In requests mode, pagination types `xpath` and `scroll` are not supported.
+
 # Roadmap
 Our vision for ScraperAI's future includes:
 - Add httpx and aiohttp crawlers

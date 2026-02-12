@@ -20,6 +20,9 @@ class DefaultChromeWebdriver(webdriver.Chrome, BaseWebdriver):
         options.add_argument("--window-size=1440, 900")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--allow-insecure-localhost")
+        options.add_argument("--disable-background-networking")
         options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
                              'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36')
 
@@ -27,7 +30,7 @@ class DefaultChromeWebdriver(webdriver.Chrome, BaseWebdriver):
         # Adding argument to disable the AutomationControlled flag
         options.add_argument("--disable-blink-features=AutomationControlled")
         # Exclude the collection of enable-automation switches
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
         # Turn-off userAutomationExtension
         options.add_experimental_option("useAutomationExtension", False)
 
@@ -38,7 +41,10 @@ class DefaultChromeWebdriver(webdriver.Chrome, BaseWebdriver):
 
     def __init__(self, driver_version: str = None):
         self.options = self._setup_options()
-        super().__init__(service=Service(ChromeDriverManager(driver_version).install()), options=self.options)
+        super().__init__(
+            service=Service(ChromeDriverManager(driver_version).install(), log_output="NUL"),
+            options=self.options
+        )
         self.local_storage = LocalStorage(self)
 
         # Changing the property of the navigator value for webdriver to undefined

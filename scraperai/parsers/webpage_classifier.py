@@ -10,6 +10,26 @@ from scraperai.utils.image import encode_image_to_b64
 from scraperai.llm.base import BaseVision, BaseJsonLM
 
 
+def _normalize_page_type(value: str) -> str:
+    if not isinstance(value, str):
+        return value
+    text = value.strip().strip('"').strip("'")
+    if text.lower().startswith("webpagetype."):
+        text = text.split(".", 1)[1]
+    normalized = text.lower()
+    aliases = {
+        "catalog": "catalog",
+        "cat": "catalog",
+        "detailed_page": "detailed_page",
+        "detail": "detailed_page",
+        "details": "detailed_page",
+        "detailed": "detailed_page",
+        "other": "other",
+        "captcha": "captcha",
+    }
+    return aliases.get(normalized, normalized)
+
+
 class WebpageVisionClassifier(ChatModelAgent):
     def __init__(self, model: BaseVision):
         super().__init__(model)
@@ -26,7 +46,7 @@ Return only category name in the answer.
 
         def _validate_response(response: str) -> Optional[str]:
             try:
-                WebpageType(response)
+                WebpageType(_normalize_page_type(response))
             except ValueError:
                 return f"{response} is not a valid page type. Should be one of {WebpageType.values_repr()}"
             return None
@@ -47,7 +67,7 @@ Return only category name in the answer.
         ]
 
         text: str = self.query_with_validation(messages, _validate_response, max_retries=2)
-        return WebpageType(text)
+        return WebpageType(_normalize_page_type(text))
 
 
 class WebpageTextClassifier(ChatModelAgent):
@@ -82,10 +102,10 @@ Return only one category in a form of json. Example of response json:
 
         def _validate_response(response: dict) -> Optional[str]:
             try:
-                WebpageType(response['category'])
+                WebpageType(_normalize_page_type(response['category']))
             except ValueError:
                 return f"{response} is not a valid page type. Should be one of {WebpageType.values_repr()}"
             return None
 
         data: dict = self.query_with_validation(messages, _validate_response, max_retries=2)
-        return WebpageType(data['category'])
+        return WebpageType(_normalize_page_type(data['category']))
