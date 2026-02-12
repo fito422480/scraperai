@@ -1,151 +1,279 @@
-<p align="center">
-  <picture>
-    <img alt="ScraperAI Logo" height="150px" src="https://raw.githubusercontent.com/scraperai/scraperai/main/images/logo.png">
-  </picture>
-</p>
-<h1 align="center">
-  ScraperAI
-</h1>
-<p align="center">
-    ⚡ Scraping has never been easier ⚡
-</p>
-<h4 align="center">
-  <a href="https://docs.scraper-ai.com">Documentation</a> |
-  <a href="https://scraper-ai.com">Website</a>
-</h4>
+# ScraperAI
 
-[![pages-build-deployment](https://github.com/scraperai/scraperai/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/scraperai/scraperai/actions/workflows/pages/pages-build-deployment)
-[![Publish to pypi](https://github.com/scraperai/scraperai/actions/workflows/cd.yml/badge.svg)](https://github.com/scraperai/scraperai/actions/workflows/cd.yml)
+[![PyPI version](https://img.shields.io/pypi/v/scraperai?logo=pypi)](https://pypi.org/project/scraperai/)
+[![Python versions](https://img.shields.io/pypi/pyversions/scraperai?logo=python)](https://pypi.org/project/scraperai/)
+[![Tests](https://github.com/scraperai/scraperai/actions/workflows/tests.yml/badge.svg)](https://github.com/scraperai/scraperai/actions/workflows/tests.yml)
+[![License](https://img.shields.io/github/license/scraperai/scraperai)](LICENSE)
 
-## What is ScraperAI
+ES | [EN](#english)
 
-ScraperAI is an open-source, AI-powered tool designed to simplify web scraping for users of all skill levels. 
-By leveraging Large Language Models, such as ChatGPT, ScraperAI extracts data from web pages and generates 
-reusable and shareable scraping recipes.
+ScraperAI es un framework de scraping asistido por IA para detectar estructura web y extraer datos en pipelines reutilizables.
 
-### Features
-- Serializable & reusable Scraper Configs
-- Automatic data detection
-- Automatic XPATHs detection
-- Automatic pagination & page type detection
-- HTML minification
-- ChatGPT support
-- Custom LLMs support
-- Selenium support
-- Custom crawlers support
+## Para Usuario Final (rápido)
 
+### 1) Instalar
 
-### Installation
-
-Install ScraperAI easily using pip or from the source.
-
-With pip:
-```console
+```bash
 pip install scraperai
 ```
-From source: 
-```console
-git clone https://github.com/scraperai/scraperai.git
-pip install ./scraperai
+
+### 2) Configurar API Key
+
+```bash
+# Linux/macOS
+export OPENAI_API_KEY="sk-..."
+
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-..."
 ```
 
-### Getting Started
+### 3) Ejecutar CLI
 
-#### Page Type Detector
-
-Web pages are categorized into four types:
-
-- **Catalog**: Pages with similar repeating elements, such as product lists, articles, companies or table rows.
-- **Details**: Pages detailing information about a single product.
-- **Captcha**: Captcha pages that hinder scraping efforts. Currently, we do not provide solutions to circumvent captchas.
-- **Other**: All other page types not currently supported.
-
-ScraperAI primarily uses page screenshots and the GPT-4 Vision model for page type determination, with a fallback algorithm for cases where screenshots or Vision model access is unavailable. Users can manually set the page type if known.
-
-#### Pagination Detector
-This feature is applicable for catalog-type web pages, supporting:
-
-- `xpath`: Xpath of pagination buttons like "Next page", "More", etc.
-- `scroll`: Infinite scrolling.
-- `urls`: a list of URLs.
-
-#### Catalog Item Detector
-This feature is specifically designed for catalog-type web pages. It identifies repeating elements that typically 
-represent individual data items, such as products, articles, or companies. 
-These elements may appear as visually distinct cards or as rows within a table, facilitating the organized display of information.
-
-#### Fields Extractor
-
-The Fields Extractor allows to detect relevant information on the page and then 
-find XPATHs that allows to extract this detected information efficiently.
-This tool can be used to retrieve information from individual catalog item cards or from nested detailing pages.
-We define two types of data fields within HTML page:
-
-- **Static fields:** Fields without explicit names, containing single or multiple values (e.g., product names or prices).
-- **Dynamic fields:** Fields with both names and values, typically formatted like table entries.
-
-#### Web Crawler
-Our WebCrawler is engineered to:
-
-- Access web pages.
-- Simulate human actions (clicking, scrolling).
-- Capture screenshots of web pages.
-
-Selenium webdriver is the default tool due to its convenience and ease of use, incorporating techniques to avoid most website blocks. 
-Users can implement their versions using other tools like PlayWright. 
-The requests package is also supported, albeit with some limitations.
-
-## Demo
-### Jupyter notebook
-We put examples of basic scraper usage in the `/examples` folder. 
-We recommend to start from [YCombinator example](https://github.com/scraperai/scraperai/blob/main/examples/ycombinator_full.ipynb). 
-In this notebook we present two expirements:
-1. [List of YCombinator companies](https://www.ycombinator.com/companies/)
-2. [List of commits in the repository](https://github.com/scraperai/scraperai/commits/main/)
-
-
-### CLI Application
-ScraperAI has a built-in CLI application. Simply run:
-```console
+```bash
 scraperai --url https://www.ycombinator.com/companies
 ```
-or simply
-```console
+
+O:
+
+```bash
 scraperai
 ```
 
-Follow the interactive process as ScraperAI attempts to auto-detect page types, pagination, catalog cards and data fields, 
-allowing for manual correction of its detections.
-The CLI currently supports only the OpenAI chat model, requiring an `openai_api_key`. 
-It can be provided via an environment variable, a `.env` file, or directly to the script.
+### 4) Qué hace la CLI
 
-Use `scraperai --help`  for assistance.
+1. Detecta tipo de página (`catalog`, `detailed_page`, `captcha`, `other`)
+2. Detecta paginación (`xpath`, `scroll`, `urls`, `none`)
+3. Detecta ítems repetitivos (cards/rows)
+4. Detecta campos a extraer
+5. Ejecuta scraping con límites (`max_pages`, `max_rows`)
+6. Exporta resultados (`json`, `csv`, `xlsx`)
 
-### Streamlit Web App (no ChromeDriver)
-You can run ScraperAI from your browser using Streamlit and the requests crawler (no Selenium/ChromeDriver).
+## Para Developer API (técnico)
 
-```console
-pip install -r requirements.txt
-streamlit run streamlit_app.py
+### Arquitectura
+
+- `ParserAI`: detección de tipo/paginación/card/campos
+- `Scraper`: ejecución de scraping según `ScraperConfig`
+- `SeleniumCrawler`: crawler por defecto para páginas dinámicas
+- `RequestsCrawler`: crawler simple para páginas estáticas
+
+### Ejemplo end-to-end
+
+```python
+from scraperai import ParserAI, Scraper, SeleniumCrawler
+from scraperai.models import ScraperConfig
+
+start_url = "https://www.ycombinator.com/companies"
+
+crawler = SeleniumCrawler()
+crawler.get(start_url)
+
+parser = ParserAI(openai_api_key="sk-...")
+
+page_type = parser.detect_page_type(
+    page_source=crawler.page_source,
+    screenshot=crawler.get_screenshot_as_base64(),
+)
+pagination = parser.detect_pagination(crawler.page_source)
+catalog_item = parser.detect_catalog_item(crawler.page_source, start_url)
+fields = parser.extract_fields(catalog_item.html_snippet)
+
+config = ScraperConfig(
+    start_url=start_url,
+    page_type=page_type,
+    pagination=pagination,
+    catalog_item=catalog_item,
+    open_nested_pages=False,
+    fields=fields,
+    max_pages=3,
+    max_rows=100,
+)
+
+rows = list(Scraper(config=config, crawler=crawler).scrape())
+print(f"Scraped {len(rows)} rows")
 ```
 
-In the web app you can:
-- Run scraping from an existing `.scraperai.json` config.
-- Auto-generate a config with OpenAI and download it.
+### ScraperConfig (resumen)
 
-Note: In requests mode, pagination types `xpath` and `scroll` are not supported.
+- `start_url: str`
+- `page_type: catalog | detailed_page | captcha | other`
+- `pagination: type/xpath/urls`
+- `catalog_item: card_xpath/url_xpath`
+- `open_nested_pages: bool`
+- `fields: static_fields + dynamic_fields`
+- `max_pages: int`
+- `max_rows: int`
 
-# Roadmap
-Our vision for ScraperAI's future includes:
-- Add httpx and aiohttp crawlers
-- Improve reciepts & prompts
-- Release SaaS web app
-- Improve prompts
-- Add support of different LLMs
-- Add [gpt4all](https://github.com/nomic-ai/gpt4all) integration
-- Add anti-captcha integration 
+### Extensión
 
-We welcome feature requests and ideas from our community.
+Crawler custom:
 
-# Contributing
-Your contributions are highly appreciated! Feel free to submit pull requests or issues.
+```python
+from scraperai import BaseCrawler
+from scraperai.models import Pagination
+
+class MyCrawler(BaseCrawler):
+    def get(self, url: str): ...
+
+    @property
+    def page_source(self) -> str: ...
+
+    def switch_page(self, pagination: Pagination) -> bool:
+        return False
+```
+
+Modelos custom:
+
+- JSON: hereda `BaseJsonLM`
+- Visión: hereda `BaseVision`
+
+## Requisitos
+
+- Python 3.10+
+- Chrome/Chromium (para `SeleniumCrawler`)
+- `OPENAI_API_KEY` (flujo por defecto)
+
+## Desarrollo
+
+```bash
+pip install -r requirements.txt
+pytest -q
+```
+
+## Ejemplos
+
+- `examples/ycombinator_full.ipynb`
+- `examples/techcrunch.ipynb`
+- `examples/github_user.ipynb`
+- `examples/ikea.ipynb`
+- `examples/acronis_jobs.ipynb`
+
+## Problemas comunes
+
+- Falta API key: define `OPENAI_API_KEY` o `.env`
+- Sitio JS-heavy con resultados pobres: usa `SeleniumCrawler`
+- CAPTCHA detectado: no hay bypass automático incluido
+
+## Limitaciones
+
+- No resuelve CAPTCHA
+- Sin scraping async actualmente
+- La calidad depende del HTML objetivo y del modelo LLM
+
+## Licencia
+
+GPL-3.0. Ver `LICENSE`.
+
+---
+
+## English
+
+ScraperAI is an AI-assisted scraping framework that detects webpage structure and extracts data into reusable pipelines.
+
+## For End Users (quick path)
+
+### 1) Install
+
+```bash
+pip install scraperai
+```
+
+### 2) Set API key
+
+```bash
+# Linux/macOS
+export OPENAI_API_KEY="sk-..."
+
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-..."
+```
+
+### 3) Run CLI
+
+```bash
+scraperai --url https://www.ycombinator.com/companies
+```
+
+Or:
+
+```bash
+scraperai
+```
+
+### 4) What CLI does
+
+1. Detects page type (`catalog`, `detailed_page`, `captcha`, `other`)
+2. Detects pagination (`xpath`, `scroll`, `urls`, `none`)
+3. Detects repeated items (cards/rows)
+4. Detects extractable fields
+5. Runs scraping with limits (`max_pages`, `max_rows`)
+6. Exports results (`json`, `csv`, `xlsx`)
+
+## For API Developers (technical path)
+
+### Architecture
+
+- `ParserAI`: detects page type/pagination/card/fields
+- `Scraper`: executes scraping from `ScraperConfig`
+- `SeleniumCrawler`: default crawler for dynamic pages
+- `RequestsCrawler`: lightweight crawler for static pages
+
+### End-to-end example
+
+```python
+from scraperai import ParserAI, Scraper, SeleniumCrawler
+from scraperai.models import ScraperConfig
+
+start_url = "https://www.ycombinator.com/companies"
+
+crawler = SeleniumCrawler()
+crawler.get(start_url)
+
+parser = ParserAI(openai_api_key="sk-...")
+
+page_type = parser.detect_page_type(
+    page_source=crawler.page_source,
+    screenshot=crawler.get_screenshot_as_base64(),
+)
+pagination = parser.detect_pagination(crawler.page_source)
+catalog_item = parser.detect_catalog_item(crawler.page_source, start_url)
+fields = parser.extract_fields(catalog_item.html_snippet)
+
+config = ScraperConfig(
+    start_url=start_url,
+    page_type=page_type,
+    pagination=pagination,
+    catalog_item=catalog_item,
+    open_nested_pages=False,
+    fields=fields,
+    max_pages=3,
+    max_rows=100,
+)
+
+rows = list(Scraper(config=config, crawler=crawler).scrape())
+print(f"Scraped {len(rows)} rows")
+```
+
+### Extend with custom components
+
+- Custom crawler: inherit `BaseCrawler`
+- Custom JSON model: inherit `BaseJsonLM`
+- Custom vision model: inherit `BaseVision`
+
+## Requirements
+
+- Python 3.10+
+- Chrome/Chromium (for `SeleniumCrawler`)
+- `OPENAI_API_KEY` (default LLM flow)
+
+## Development
+
+```bash
+pip install -r requirements.txt
+pytest -q
+```
+
+## License
+
+GPL-3.0. See `LICENSE`.
+
