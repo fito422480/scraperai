@@ -26,6 +26,7 @@ tqdm
 retry
 Pillow
 pydantic==2.12.5
+boto3
 
 # CLI
 appdirs

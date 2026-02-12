@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ScraperAI on AWS App Runner + S3 export bucket
+
+Parameters:
+  AppName:
+    Type: String
+    Default: scraperai
+  ImageUri:
+    Type: String
+    Description: ECR image URI (example: 123456789012.dkr.ecr.us-east-1.amazonaws.com/scraperai:latest)
+  CsvBucketName:
+    Type: String
+    Default: ""
+    Description: Optional. Leave empty to auto-generate.
+  OpenAIApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Optional. OPENAI_API_KEY passed to container runtime.
+  OpenRouterApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Optional. OPENROUTER_API_KEY passed to container runtime.
+  DeepSeekApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Optional. DEEPSEEK_API_KEY passed to container runtime.
+
+Conditions:
+  HasCsvBucketName: !Not [!Equals [!Ref CsvBucketName, ""]]
+
+Resources:
+  CsvBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !If [HasCsvBucketName, !Ref CsvBucketName, !Ref AWS::NoValue]
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  AppRunnerEcrAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-apprunner-ecr-access"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+
+  AppRunnerInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-apprunner-instance"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: tasks.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${AppName}-s3-exports"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub "${CsvBucket.Arn}/exports/*"
+
+  AppRunnerService:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub "${AppName}-service"
+      SourceConfiguration:
+        AutoDeploymentsEnabled: false
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerEcrAccessRole.Arn
+        ImageRepository:
+          ImageIdentifier: !Ref ImageUri
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: "8501"
+            RuntimeEnvironmentVariables:
+              - Name: CSV_BUCKET
+                Value: !Ref CsvBucket
+              - Name: OPENAI_API_KEY
+                Value: !Ref OpenAIApiKey
+              - Name: OPENROUTER_API_KEY
+                Value: !Ref OpenRouterApiKey
+              - Name: DEEPSEEK_API_KEY
+                Value: !Ref DeepSeekApiKey
+      InstanceConfiguration:
+        Cpu: "1024"
+        Memory: "2048"
+        InstanceRoleArn: !GetAtt AppRunnerInstanceRole.Arn
+      HealthCheckConfiguration:
+        Protocol: TCP
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+        Interval: 10
+        Timeout: 5
+
+Outputs:
+  AppRunnerServiceUrl:
+    Value: !Sub "https://${AppRunnerService.ServiceUrl}"
+  CsvBucketName:
+    Value: !Ref CsvBucket

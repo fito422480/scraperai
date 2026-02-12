@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import datetime
 import json
 import os
+import uuid
 from urllib.parse import urljoin
 
+import boto3
 import pandas as pd
 import requests
 import streamlit as st
@@ -112,6 +115,29 @@ def _normalize_rows(rows: list[dict]) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame()
     return pd.json_normalize(rows)
+
+
+def _upload_csv_to_s3(df: pd.DataFrame) -> tuple[str, str] | tuple[None, None]:
+    bucket = os.getenv("CSV_BUCKET", "").strip()
+    if not bucket or df.empty:
+        return None, None
+
+    key = f"exports/{datetime.date.today().isoformat()}/{uuid.uuid4()}.csv"
+    region = os.getenv("AWS_REGION")
+    s3 = boto3.client("s3", region_name=region)
+    payload = df.to_csv(index=False).encode("utf-8")
+    s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=payload,
+        ContentType="text/csv; charset=utf-8",
+    )
+    url = s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": bucket, "Key": key},
+        ExpiresIn=3600,
+    )
+    return key, url
 
 
 def _prepare_html_for_llm(html_text: str, max_chars: int = 6000) -> str:
@@ -688,3 +714,15 @@ if go:
                 mime="text/csv",
                 use_container_width=True,
             )
+            if not df.empty:
+                try:
+                    s3_key, s3_url = _upload_csv_to_s3(df)
+                    if s3_key and s3_url:
+                        st.success(f"CSV subido a S3: {s3_key}")
+                        st.link_button(
+                            "Descargar CSV desde S3 (link temporal 1h)",
+                            s3_url,
+                            use_container_width=True,
+                        )
+                except Exception as e:
+                    st.warning(f"No se pudo subir CSV a S3: {e}")
