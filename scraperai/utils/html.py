@@ -3,7 +3,6 @@ import logging
 import re
 from typing import Any
 
-import htmlmin
 import tiktoken
 from bs4 import BeautifulSoup
 from lxml import html, etree
@@ -21,6 +20,15 @@ GOOD_ATTRS = {
 }
 
 
+def _safe_minify_html(html_content: str) -> str:
+    soup = BeautifulSoup(html_content, "html.parser")
+    raw = str(soup)
+    # Collapse whitespace between tags and repeated spaces.
+    raw = re.sub(r'>\s+<', '><', raw)
+    raw = re.sub(r'\s{2,}', ' ', raw)
+    return raw.strip()
+
+
 def minify_html(html_content: str,
                 good_attrs: set[str] = None,
                 bad_tags: set[str] = None,
@@ -32,7 +40,7 @@ def minify_html(html_content: str,
         bad_tags = BAD_TAGS
 
     # Remove spaces and new lines
-    html_content = htmlmin.minify(str(BeautifulSoup(html_content, "html.parser")), remove_empty_space=True)
+    html_content = _safe_minify_html(html_content)
     logger.debug(f'Initial HTML length: {len(html_content)}')
     # Remove bad tags
     soup = BeautifulSoup(html_content, "html.parser")

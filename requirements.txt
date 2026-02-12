@@ -8,7 +8,6 @@ openai==1.109.1
 tiktoken
 
 # Parsing
-htmlmin
 requests
 beautifulsoup4
 lxml==6.0.2
