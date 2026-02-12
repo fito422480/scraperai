@@ -469,8 +469,8 @@ def _fill_missing_from_detail(row: dict, start_url: str) -> dict:
 st.markdown(
     """
     <div class="hero">
-        <h1>ScraperAI Studio</h1>
-        <p>Pega una URL, pulsa un boton y listo. Sin ChromeDriver.</p>
+        <h1>ScraperAI GVA</h1>
+        <p>Pega una URL, pulsa un boton y listo.</p>
     </div>
     """,
     unsafe_allow_html=True,
