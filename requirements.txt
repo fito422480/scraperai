@@ -1,17 +1,17 @@
 # ML
 packaging==23.2
 langchain==0.1.16
-langchain_community
-langchain_openai
-langchain_text_splitters
-openai
+langchain-community==0.0.38
+langchain-openai==0.1.7
+langchain-text-splitters==0.0.2
+openai==1.109.1
 tiktoken
 
 # Parsing
 htmlmin
 requests
 beautifulsoup4
-lxml>=5.0.0
+lxml==6.0.2
 selenium==4.9.1
 webdriver-manager
 
@@ -26,9 +26,9 @@ python-dotenv
 tqdm
 retry
 Pillow
-pydantic
+pydantic==2.12.5
 
 # CLI
 appdirs
 click
-streamlit
+streamlit==1.54.0
