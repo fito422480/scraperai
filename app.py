@@ -287,7 +287,21 @@ def _run_manual_scrape(
     fields_text: str,
     max_rows: int,
 ) -> list[dict]:
-    response = requests.get(start_url, timeout=30)
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/123.0.0.0 Safari/537.36"
+        ),
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://www.google.com/",
+    }
+    response = requests.get(start_url, headers=headers, timeout=30)
+    if response.status_code == 403:
+        # Retry once with a clean session; some sites block plain first-hit requests.
+        with requests.Session() as session:
+            session.headers.update(headers)
+            response = session.get(start_url, timeout=30)
     response.raise_for_status()
     tree = html.fromstring(response.text)
     fields = _parse_manual_fields(fields_text)
